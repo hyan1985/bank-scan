@@ -635,15 +635,13 @@ def export_excel(df: pd.DataFrame) -> Path:
 
 
 def update_dashboard(df: pd.DataFrame) -> Path:
-    """把扫描数据注入 dashboard.html，生成自包含面板（参考 ai轮动研报 模式）。"""
+    """把扫描数据注入 dashboard.html 模板，生成根目录 index.html（Pages 入口）。"""
     import json
-    import re
 
     template = BASE_DIR / "dashboard.html"
     if not template.exists():
         print(f"  [跳过] 面板模板不存在: {template}")
         return template
-
     keep_cols = [
         "name", "type", "trade_date", "close", "pe_natural_year",
         "eps_natural_year_est", "dps_recent_fy", "pe_price",
@@ -671,7 +669,7 @@ def update_dashboard(df: pd.DataFrame) -> Path:
     # 注入 AI 文本（转义为 JS 字符串）
     ai_js = json.dumps(ai_text, ensure_ascii=False)
     html = html.replace("__AI_PLACEHOLDER__", ai_js)
-    out = BASE_DIR / "dashboard.html"
+    out = BASE_DIR / "index.html"
     out.write_text(html, encoding="utf-8")
     print(f"  Dashboard 已更新：{out}")
     return out
