@@ -1,6 +1,8 @@
 # 银行股每日扫描（大佬刘双估值战法）
 
-基于「大佬刘战法一」的银行股买入点扫描脚本，每日自动提示哪些银行进入上车区间。
+基于「大佬刘战法一」的银行股买入点扫描脚本，每日自动提示哪些银行进入上车区间。扫描结果自动生成可视化面板，通过 GitHub Pages 在线浏览。
+
+📊 在线面板：https://hyan1985.github.io/bank-scan/
 
 ## 估值逻辑
 
@@ -62,7 +64,14 @@ python bank_daily_scan.py --workers 4  # 并行拉取线程数
 
 ## 定时自动跑（GitHub Actions）
 
-每天 15:30 UTC（北京时间 23:30，收盘后）自动扫描，结果提交回仓库。
+工作日（周一至周五）自动扫描，扫描结果提交回仓库并更新面板：
+
+| 时间（北京时间） | 说明 |
+|------|------|
+| **21:05** | 触发（UTC `5 13`） |
+| **~23:00** | 实际执行（GitHub 调度器有约 2 小时延迟） |
+
+与其他项目错峰执行，避开 GitHub 整点高负载（`00`/`30` 整点延迟明显）。
 
 ### 部署步骤
 
@@ -80,9 +89,16 @@ python bank_daily_scan.py --workers 4  # 并行拉取线程数
 
 2. **配置 GitHub Secrets**（仓库 → Settings → Secrets and variables → Actions → New repository secret）：
    - `TUSHARE_TOKEN`：你的 tushare token（必填）
-   - `DEEPSEEK_API_KEY`：DeepSeek key（可选，填了自动生成 AI 解读）
+   - `DEEPSEEK`：DeepSeek key（可选，填了自动生成 AI 解读）
 
 3. Actions 会自动按计划跑。也可在 Actions 页面手动触发（Run workflow）。
+
+### 可视化面板（GitHub Pages）
+
+- 面板模板为 `dashboard.html`（含数据占位符），扫描后由脚本注入最新数据生成 `index.html`。
+- 仓库根目录的 `index.html` 即为 GitHub Pages 入口，无需额外配置构建流程。
+- 打开仓库 **Settings → Pages**，Source 选择 **Deploy from a branch**，Branch 选 `main` + `/ (root)` 即可。
+- Pages 部署由 GitHub 服务端完成，若出现 `deployment_queued` / 超时，多为 GitHub 服务拥堵，数据已在仓库中，服务恢复后自动部署。
 
 ### 注意
 
