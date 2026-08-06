@@ -634,6 +634,49 @@ def export_excel(df: pd.DataFrame) -> Path:
     return path
 
 
+def update_dashboard(df: pd.DataFrame) -> Path:
+    """把扫描数据注入 dashboard.html，生成自包含面板（参考 ai轮动研报 模式）。"""
+    import json
+    import re
+
+    template = BASE_DIR / "dashboard.html"
+    if not template.exists():
+        print(f"  [跳过] 面板模板不存在: {template}")
+        return template
+
+    keep_cols = [
+        "name", "type", "trade_date", "close", "pe_natural_year",
+        "eps_natural_year_est", "dps_recent_fy", "pe_price",
+        "div_price", "base_price", "buy_price", "signal",
+    ]
+    rows = []
+    for _, r in df.iterrows():
+        item = {}
+        for c in keep_cols:
+            if c in r and pd.notna(r[c]):
+                item[c] = (
+                    float(r[c]) if isinstance(r[c], (int, float, np.floating)) else r[c]
+                )
+        rows.append(item)
+    data_json = json.dumps(rows, ensure_ascii=False)
+
+    # AI 解读：读取最近的 ai_interpret_*.md
+    ai_text = ""
+    md_files = sorted(OUTPUT_DIR.glob("ai_interpret_*.md"), reverse=True)
+    if md_files:
+        ai_text = md_files[0].read_text(encoding="utf-8").strip()
+
+    html = template.read_text(encoding="utf-8")
+    html = html.replace("__DATA_PLACEHOLDER__", data_json)
+    # 注入 AI 文本（转义为 JS 字符串）
+    ai_js = json.dumps(ai_text, ensure_ascii=False)
+    html = html.replace("__AI_PLACEHOLDER__", ai_js)
+    out = BASE_DIR / "dashboard.html"
+    out.write_text(html, encoding="utf-8")
+    print(f"  Dashboard 已更新：{out}")
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="银行股每日双估值上车扫描")
     parser.add_argument("--no-save", action="store_true", help="不保存文件")
@@ -652,6 +695,7 @@ def main() -> None:
     if not args.no_save:
         path = export_excel(df)
         print(f"Excel 已保存：{path}")
+    update_dashboard(df)
 
 
 if __name__ == "__main__":
