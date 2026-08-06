@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>银行股每日扫描 · 上车提示面板</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --green: #22c55e;
+    --blue: #3b82f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  h1 { font-size: 22px; font-weight: 700; }
+  .date { color: var(--muted); font-size: 14px; }
+  .badge { background: var(--blue); color: #fff; font-size: 12px; padding: 3px 10px; border-radius: 12px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat .num { font-size: 28px; font-weight: 700; }
+  .stat .label { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .stat.green .num { color: var(--green); }
+  .stat.amber .num { color: var(--amber); }
+  .stat.red .num { color: var(--red); }
+
+  .section-title { font-size: 16px; font-weight: 600; margin: 24px 0 10px; }
+
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .controls button {
+    background: var(--card); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+  }
+  .controls button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .controls button:hover { border-color: var(--blue); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 10px; overflow: hidden; font-size: 13px; }
+  th, td { padding: 9px 10px; text-align: right; white-space: nowrap; }
+  th { background: #273449; font-weight: 600; color: var(--muted); font-size: 12px; }
+  td:first-child, th:first-child { text-align: left; }
+  td.name { font-weight: 600; }
+  td.signal { font-weight: 600; }
+  tr { border-bottom: 1px solid #2a3851; }
+  tr:last-child { border-bottom: none; }
+  tr:hover { background: #26344d; }
+
+  .sig-fire { color: var(--green); }
+  .sig-near { color: var(--amber); }
+  .sig-wait { color: var(--muted); }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .sub { color: var(--muted); }
+
+  .ai-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; line-height: 1.75; font-size: 14px; white-space: pre-wrap; }
+  .ai-box h1, .ai-box h2, .ai-box h3 { font-size: 15px; margin: 10px 0 6px; }
+  .ai-box ul, .ai-box ol { padding-left: 20px; }
+  .ai-box a { color: var(--blue); }
+
+  .footer { margin-top: 30px; color: var(--muted); font-size: 12px; text-align: center; }
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+  .loading { text-align: center; padding: 60px; color: var(--muted); }
+  .spin { display: inline-block; width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 640px) {
+    table { font-size: 11px; }
+    th, td { padding: 6px 6px; }
+    .hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🏦 银行股每日上车提示</h1>
+    <div class="date" id="updated">加载中...</div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="section-title">上车信号一览</div>
+  <div class="controls" id="filters">
+    <button data-f="all" class="active">全部</button>
+    <button data-f="fire">🔥 射击范围</button>
+    <button data-f="near">🎯 参考上车</button>
+    <button data-f="wait">⏳ 等待</button>
+  </div>
+  <div class="table-wrap" id="tableWrap">
+    <div class="loading" id="loading"><div class="spin"></div><div style="margin-top:12px">正在加载扫描数据...</div></div>
+  </div>
+
+  <div class="section-title">AI 每日解读</div>
+  <div class="ai-box" id="aiBox"><div class="empty" style="padding:20px">未生成解读（需配置 DEEPSEEK API）</div></div>
+
+  <div class="footer">数据来源：Tushare · 每日收盘后自动扫描 · 仅作研究参考，不构成投资建议</div>
+</div>
+
+<script>
+const REPO = 'hyan1985/bank-scan';
+const BRANCH = 'main';
+const CSV_PATH = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/output/bank_scan_latest.csv`;
+const AI_PATH = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/output/ai_interpret_latest.md`;
+
+let allRows = [];
+let currentFilter = 'all';
+
+function signalRank(s) {
+  if (s === '射击范围') return 0;
+  if (s === '参考上车') return 1;
+  if (s.startsWith('等待')) return 2;
+  return 3;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtNum(v, digits=2) {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (isNaN(n)) return '—';
+  return n.toFixed(digits);
+}
+
+async function loadCSV() {
+  const res = await fetch(CSV_PATH);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const text = await res.text();
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) throw new Error('空数据');
+  const headers = lines[0].split(',').map(h => h.trim());
+  allRows = lines.slice(1).map(line => {
+    const cells = line.split(',');
+    const row = {};
+    headers.forEach((h, i) => { row[h] = cells[i]?.trim() ?? ''; });
+    return row;
+  });
+  // 信号排序
+  allRows.sort((a, b) => signalRank(a.signal) - signalRank(b.signal));
+}
+
+function renderStats() {
+  const fire = allRows.filter(r => r.signal === '射击范围').length;
+  const near = allRows.filter(r => r.signal === '参考上车').length;
+  const wait = allRows.filter(r => r.signal.startsWith('等待')).length;
+  const total = allRows.length;
+  const date = allRows[0]?.trade_date || '';
+
+  document.getElementById('updated').textContent =
+    `交易日 ${date} · 共 ${total} 只银行`;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat green"><div class="num">${fire}</div><div class="label">🔥 射击范围</div></div>
+    <div class="stat amber"><div class="num">${near}</div><div class="label">🎯 参考上车</div></div>
+    <div class="stat red"><div class="num">${wait}</div><div class="label">⏳ 等待</div></div>
+    <div class="stat"><div class="num">${total}</div><div class="label">🏦 扫描总数</div></div>
+  `;
+}
+
+function renderTable() {
+  const filtered = currentFilter === 'all'
+    ? allRows
+    : allRows.filter(r => {
+        if (currentFilter === 'fire') return r.signal === '射击范围';
+        if (currentFilter === 'near') return r.signal === '参考上车';
+        if (currentFilter === 'wait') return r.signal.startsWith('等待');
+        return true;
+      });
+
+  if (!filtered.length) {
+    document.getElementById('tableWrap').innerHTML =
+      '<div class="empty">当前筛选无数据</div>';
+    return;
+  }
+
+  const rowsHtml = filtered.map(r => {
+    const sig = r.signal;
+    let sigClass = 'sig-wait';
+    if (sig === '射击范围') sigClass = 'sig-fire';
+    else if (sig === '参考上车') sigClass = 'sig-near';
+
+    const pe = fmtNum(r.pe_natural_year);
+    const pePrice = fmtNum(r.pe_price);
+    const divPrice = fmtNum(r.div_price);
+    const buyPrice = fmtNum(r.buy_price);
+
+    return `<tr>
+      <td class="name">${esc(r.name)}</td>
+      <td class="sub">${esc(r.type || '')}</td>
+      <td>${fmtNum(r.close)}</td>
+      <td>${pe}</td>
+      <td class="hide-mobile">${fmtNum(r.eps_natural_year_est, 3)}</td>
+      <td class="hide-mobile">${fmtNum(r.dps_recent_fy, 3)}</td>
+      <td class="hide-mobile">${fmtNum(r.pe_price)}</td>
+      <td class="hide-mobile">${fmtNum(r.div_price)}</td>
+      <td>${buyPrice}</td>
+      <td class="signal ${sigClass}">${esc(sig)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('tableWrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>银行</th><th>类型</th><th>现价</th><th>自然年PE</th>
+        <th class="hide-mobile">预估EPS</th><th class="hide-mobile">每股分红</th>
+        <th class="hide-mobile">PE估值价</th><th class="hide-mobile">股息估值价</th>
+        <th>参考上车价</th><th>信号</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+}
+
+async function loadAI() {
+  const box = document.getElementById('aiBox');
+  try {
+    const res = await fetch(AI_PATH);
+    if (!res.ok) throw new Error('no ai file');
+    let md = await res.text();
+    // 简单 markdown 渲染（处理标题/列表/粗体）
+    md = md.replace(/###?\s*(.+)/g, '<h3>$1</h3>')
+           .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+           .replace(/^[-*]\s+(.+)$/gm, '• $1');
+    box.innerHTML = md;
+  } catch (e) {
+    box.innerHTML = '<div class="empty" style="padding:20px">未生成解读（需配置 DEEPSEEK API）</div>';
+  }
+}
+
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  currentFilter = btn.dataset.f;
+  document.querySelectorAll('#filters button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+});
+
+(async function init() {
+  try {
+    await loadCSV();
+    renderStats();
+    renderTable();
+  } catch (e) {
+    document.getElementById('tableWrap').innerHTML =
+      `<div class="empty">无法加载扫描数据<br><span class="sub">${esc(e.message)}</span><br><br>请确认 Actions 已成功运行并生成 <code>output/bank_scan_latest.csv</code></div>`;
+  }
+  loadAI();
+})();
+</script>
+</body>
+</html>

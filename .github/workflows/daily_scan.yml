@@ -36,15 +36,24 @@ jobs:
       - name: 写入密钥
         run: |
           echo "TUSHARE_TOKEN=${{ secrets.TUSHARE_TOKEN }}" > .env
-          if [ -n "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
-            echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}" >> .env
+          if [ -n "${{ secrets.DEEPSEEK }}" ]; then
+            echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK }}" >> .env
           fi
 
       - name: 运行每日扫描
         run: python bank_daily_scan.py
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK }}
+
+      - name: 生成页面用最新数据
+        run: |
+          LATEST_CSV=$(ls -t output/bank_scan_*.csv | head -1)
+          cp "$LATEST_CSV" output/bank_scan_latest.csv
+          if ls -t output/ai_interpret_*.md >/dev/null 2>&1; then
+            LATEST_MD=$(ls -t output/ai_interpret_*.md | head -1)
+            cp "$LATEST_MD" output/ai_interpret_latest.md
+          fi
 
       - name: 提交扫描结果
         run: |
