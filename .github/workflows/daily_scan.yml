@@ -41,7 +41,7 @@ jobs:
           fi
 
       - name: 运行每日扫描
-        run: python bank_daily_scan.py --no-ai
+        run: python bank_daily_scan.py
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
