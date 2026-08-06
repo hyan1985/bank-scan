@@ -400,7 +400,7 @@ def deepseek_interpret(df: pd.DataFrame, trade_date: str) -> str | None:
     import requests
 
     base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/")
-    model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
 
     # 组装输入表：只挑关键列
     show_cols = [
