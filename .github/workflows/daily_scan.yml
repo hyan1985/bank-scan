@@ -2,8 +2,8 @@ name: 银行股每日扫描
 
 on:
   schedule:
-    # 周一至周五 15:30 UTC（北京时间 23:30）收盘后自动扫描
-    - cron: '30 15 * * 1-5'
+    # 北京时间 23:00 = UTC 15:00，周一至周五收盘后自动扫描
+    - cron: '0 15 * * 1-5'
   workflow_dispatch: # 允许手动触发
 
 permissions:
