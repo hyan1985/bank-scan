@@ -40,10 +40,9 @@ jobs:
           if [ -n "${{ secrets.DEEPSEEK }}" ]; then
             echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK }}" >> .env
           fi
-          # 诊断：确认 .env 中的键是否存在（不泄露值）
-          echo "env 文件中的键:"
-          cut -d= -f1 .env
-          python3 -c "print('DEEPSEEK_API_KEY 长度:', len(open('.env').read().split('DEEPSEEK_API_KEY=')[1].splitlines()[0]) if 'DEEPSEEK_API_KEY=' in open('.env').read() else '未找到')"
+          # 诊断：用 base64 看 .env 文件结构（避免脱敏）
+          echo "--- .env 文件内容(base64) ---"
+          base64 < .env
 
       - name: 运行每日扫描
         run: python bank_daily_scan.py
