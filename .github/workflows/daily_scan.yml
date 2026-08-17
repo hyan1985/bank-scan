@@ -2,7 +2,8 @@ name: 银行股每日扫描
 
 on:
   schedule:
-    # 目标实际执行约北京 23:00，调度器约 2h 延迟，提前到 UTC 13:05（北京 21:05）触发
+    # 目标实际执行约北京时间 23:00。GitHub 调度器有约 2 小时延迟，
+    # 故提前到 UTC 13:05（北京 21:05）触发，避开整点高负载。
     - cron: '5 13 * * 1-5'
   workflow_dispatch: # 允许手动触发
 
@@ -39,6 +40,10 @@ jobs:
           if [ -n "${{ secrets.DEEPSEEK }}" ]; then
             echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK }}" >> .env
           fi
+          # 诊断：确认 .env 中的键是否存在（不泄露值）
+          echo "env 文件中的键:"
+          cut -d= -f1 .env
+          python3 -c "print('DEEPSEEK_API_KEY 长度:', len(open('.env').read().split('DEEPSEEK_API_KEY=')[1].splitlines()[0]) if 'DEEPSEEK_API_KEY=' in open('.env').read() else '未找到')"
 
       - name: 运行每日扫描
         run: python bank_daily_scan.py
