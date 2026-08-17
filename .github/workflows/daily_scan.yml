@@ -40,30 +40,12 @@ jobs:
           if [ -n "${{ secrets.DEEPSEEK }}" ]; then
             echo "DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK }}" >> .env
           fi
-          # 诊断：用 base64 看 .env 文件结构（避免脱敏）
-          echo "--- .env 文件内容(base64) ---"
-          base64 < .env
 
       - name: 运行每日扫描
         run: python bank_daily_scan.py
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK }}
-
-      - name: DeepSeek 密钥诊断
-        run: |
-          python3 - <<'PY'
-          import os
-          k = os.environ.get("DEEPSEEK_API_KEY", "")
-          print(f"环境变量长度: {len(k)}")
-          print(f"首字符: {k[:1]!r}")
-          print(f"末字符: {k[-1:]!r}")
-          print(f"是否空白: {k.strip() == ''}")
-          print(f"前4位: {k[:4]!r}")
-          print(f"含空格: {' ' in k}")
-          print(f"含$: {'$' in k}")
-          print(f"含#: {'#' in k}")
-          PY
 
       - name: 提交扫描结果并更新面板
         run: |
