@@ -39,6 +39,16 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+# 诊断：确认 .env 加载情况（Actions 环境调试用）
+if os.getenv("SCAN_DEBUG"):
+    import glob as _glob
+    _cwd = os.getcwd()
+    _env_candidates = _glob.glob("**/.env", recursive=True)[:5]
+    print(f"[debug] cwd={_cwd}")
+    print(f"[debug] .env 文件: {_env_candidates}")
+    print(f"[debug] DEEPSEEK_API_KEY len={len(os.getenv('DEEPSEEK_API_KEY',''))}")
+    print(f"[debug] DEEPSEEK_MODEL={os.getenv('DEEPSEEK_MODEL','')}")
+
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 CONFIG_FILE = BASE_DIR / "bank_valuation_config.csv"
