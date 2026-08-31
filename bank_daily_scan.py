@@ -403,10 +403,12 @@ def evaluate_stock(row: pd.Series, data: dict, close: float | None) -> dict:
 
 def deepseek_interpret(df: pd.DataFrame, trade_date: str) -> str | None:
     """调用 DeepSeek 生成当日上车解读；未配置 key 时返回 None。"""
-    if os.getenv("SCAN_DEBUG"):
-        print(f"[debug-deepseek] getenv 读取 DEEPSEEK_API_KEY len={len(os.getenv('DEEPSEEK_API_KEY',''))}")
-        print(f"[debug-deepseek] environ 中 DEEPSEEK keys={[k for k in os.environ if 'DEEPSEEK' in k]}")
     api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
+    if os.getenv("SCAN_DEBUG"):
+        print(f"[debug-deepseek] getenv 原始 len={len(os.getenv('DEEPSEEK_API_KEY',''))}")
+        print(f"[debug-deepseek] environ 中 DEEPSEEK keys={[k for k in os.environ if 'DEEPSEEK' in k]}")
+        print(f"[debug-deepseek] strip 后 len={len(api_key)} 前2字符={api_key[:2]!r}")
+        print(f"[debug-deepseek] os.environ 里该值 repr 前 40={repr(os.environ.get('DEEPSEEK_API_KEY',''))[:40]!r}")
     if not api_key:
         return None
 
