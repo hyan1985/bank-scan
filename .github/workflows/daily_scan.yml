@@ -46,7 +46,6 @@ jobs:
         env:
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK }}
-          SCAN_DEBUG: "true"
 
       - name: 提交扫描结果并更新面板
         run: |
