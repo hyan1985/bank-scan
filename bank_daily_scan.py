@@ -39,16 +39,6 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-# 诊断：确认 .env 加载情况（Actions 环境调试用）
-if os.getenv("SCAN_DEBUG"):
-    import glob as _glob
-    _cwd = os.getcwd()
-    _env_candidates = _glob.glob("**/.env", recursive=True)[:5]
-    print(f"[debug] cwd={_cwd}")
-    print(f"[debug] .env 文件: {_env_candidates}")
-    print(f"[debug] DEEPSEEK_API_KEY len={len(os.getenv('DEEPSEEK_API_KEY',''))}")
-    print(f"[debug] DEEPSEEK_MODEL={os.getenv('DEEPSEEK_MODEL','')}")
-
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 CONFIG_FILE = BASE_DIR / "bank_valuation_config.csv"
@@ -404,11 +394,6 @@ def evaluate_stock(row: pd.Series, data: dict, close: float | None) -> dict:
 def deepseek_interpret(df: pd.DataFrame, trade_date: str) -> str | None:
     """调用 DeepSeek 生成当日上车解读；未配置 key 时返回 None。"""
     api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
-    if os.getenv("SCAN_DEBUG"):
-        print(f"[debug-deepseek] getenv 原始 len={len(os.getenv('DEEPSEEK_API_KEY',''))}")
-        print(f"[debug-deepseek] environ 中 DEEPSEEK keys={[k for k in os.environ if 'DEEPSEEK' in k]}")
-        print(f"[debug-deepseek] strip 后 len={len(api_key)} 前2字符={api_key[:2]!r}")
-        print(f"[debug-deepseek] os.environ 里该值 repr 前 40={repr(os.environ.get('DEEPSEEK_API_KEY',''))[:40]!r}")
     if not api_key:
         return None
 
@@ -459,17 +444,12 @@ def deepseek_interpret(df: pd.DataFrame, trade_date: str) -> str | None:
             },
             timeout=60,
         )
-        if os.getenv("SCAN_DEBUG"):
-            print(f"[debug-deepseek] HTTP 状态码={resp.status_code}")
-            print(f"[debug-deepseek] 响应体前300字={resp.text[:300]!r}")
         resp.raise_for_status()
         data = resp.json()
         msg = data["choices"][0]["message"]
         content = (msg.get("content") or "").strip()
         if not content:
             content = (msg.get("reasoning_content") or "").strip()
-        if os.getenv("SCAN_DEBUG"):
-            print(f"[debug-deepseek] 解析后 content 长度={len(content)} 前50字={content[:50]!r}")
         return content if content else None
     except Exception as exc:  # noqa: BLE001
         print(f"[DeepSeek] 解读失败：{exc}", file=sys.stderr)
