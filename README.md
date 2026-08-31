@@ -62,6 +62,16 @@ python bank_daily_scan.py --workers 4  # 并行拉取线程数
 - `output/bank_scan_YYYYMMDD.xlsx` — 上车提示 Excel（含全量/上车提示/估值参数 3 个 sheet）
 - `output/ai_interpret_YYYYMMDD.md` — DeepSeek 每日解读（配置 key 时）
 
+### AI 每日解读
+
+默认使用 `deepseek-v4-flash`（可用 `DEEPSEEK_MODEL` 覆盖）。该模型为推理模型，**默认开启 thinking mode**，会先把大量 token 消耗在思考过程上，导致 `max_tokens` 被耗尽、最终回答 `content` 为空（现象：面板文字停留在旧日期，日志显示 `HTTP 200` 但 `content=""`）。
+
+脚本已做如下处理：
+
+- 请求体显式传入 `"thinking": {"type": "disabled"}` 关闭推理模式，让模型直接把回答写入 `content`；
+- `max_tokens` 设为 2000；
+- 解析时兜底：若 `content` 为空，回退读取 `reasoning_content`。
+
 ## 定时自动跑（GitHub Actions）
 
 工作日（周一至周五）自动扫描，扫描结果提交回仓库并更新面板：
