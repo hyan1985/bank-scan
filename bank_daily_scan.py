@@ -458,9 +458,15 @@ def deepseek_interpret(df: pd.DataFrame, trade_date: str) -> str | None:
             },
             timeout=60,
         )
+        if os.getenv("SCAN_DEBUG"):
+            print(f"[debug-deepseek] HTTP 状态码={resp.status_code}")
+            print(f"[debug-deepseek] 响应体前300字={resp.text[:300]!r}")
         resp.raise_for_status()
         data = resp.json()
-        return data["choices"][0]["message"]["content"].strip()
+        content = data["choices"][0]["message"]["content"].strip()
+        if os.getenv("SCAN_DEBUG"):
+            print(f"[debug-deepseek] 解析后 content 长度={len(content)} 前50字={content[:50]!r}")
+        return content if content else None
     except Exception as exc:  # noqa: BLE001
         print(f"[DeepSeek] 解读失败：{exc}", file=sys.stderr)
         return None
