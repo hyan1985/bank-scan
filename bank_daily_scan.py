@@ -454,7 +454,8 @@ def deepseek_interpret(df: pd.DataFrame, trade_date: str) -> str | None:
                     {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.6,
-                "max_tokens": 1200,
+                "max_tokens": 2000,
+                "thinking": {"type": "disabled"},
             },
             timeout=60,
         )
@@ -463,7 +464,10 @@ def deepseek_interpret(df: pd.DataFrame, trade_date: str) -> str | None:
             print(f"[debug-deepseek] 响应体前300字={resp.text[:300]!r}")
         resp.raise_for_status()
         data = resp.json()
-        content = data["choices"][0]["message"]["content"].strip()
+        msg = data["choices"][0]["message"]
+        content = (msg.get("content") or "").strip()
+        if not content:
+            content = (msg.get("reasoning_content") or "").strip()
         if os.getenv("SCAN_DEBUG"):
             print(f"[debug-deepseek] 解析后 content 长度={len(content)} 前50字={content[:50]!r}")
         return content if content else None
